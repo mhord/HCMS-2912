@@ -1,16 +1,3 @@
-/***************************************************************************
-gpio_test.h
-
-Header file for pcDuino GPIO example code.
-
-26 Mar 2013 - Mike Hord, SparkFun Electronics
-
-This code is beerware- if you find it useful, please buy me (or, for that
-matter, any other SparkFun employee you met) a pint next time you meet us at
-the local.
-
-***************************************************************************/
-
 #ifndef __gpio_test_h__
 #define __gpio_test_h__
 
@@ -22,6 +9,7 @@ the local.
 #define INPUT  '0'
 #define OUTPUT '1'
 #define INPUT_PU '8'
+#define SPIPIN '2'
 
 class gpio
 {
