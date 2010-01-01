@@ -14,11 +14,11 @@
 class gpio
 {
 	public:
-		gpio(int pinID, int initMode);
+		gpio(int pinID, int initMode, int initVal = LOW);
 		~gpio();
 		void mode(int newMode);
 		void pinWrite(int newLevel);
-		int read();
+		int pinRead();
 
 	private:
 		void writeFile(int fileID, int value);

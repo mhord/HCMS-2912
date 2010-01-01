@@ -5,17 +5,21 @@
 
 #include "gpio.h"
 
-gpio::gpio(int pinID, int initMode)
+gpio::gpio(int pinID, int initMode, int initVal)
 {
   char path[41];
 
 	memset(path,0,sizeof(path));
+	
 	sprintf(path, "/sys/devices/virtual/misc/gpio/mode/gpio%d", pinID);
 	_modeFileID = open(path, O_RDWR);
-  writeFile(_modeFileID, initMode);
 
 	sprintf(path, "/sys/devices/virtual/misc/gpio/pin/gpio%d", pinID);
   _pinFileID = open(path, O_RDWR);
+	
+	writeFile(_pinFileID, initVal);
+  writeFile(_modeFileID, initMode);
+
 }
 
 gpio::~gpio()
@@ -46,7 +50,10 @@ void gpio::pinWrite(int newLevel)
 	writeFile(_pinFileID, newLevel);
 }
 
-int gpio::read()
+int gpio::pinRead()
 {
-	return 0;
+	lseek(_pinFileID, 0, SEEK_SET);
+	int buffer;
+	read(_pinFileID, &buffer, 4);
+	return buffer;
 }
