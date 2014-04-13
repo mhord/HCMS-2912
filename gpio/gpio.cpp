@@ -1,16 +1,3 @@
-/***************************************************************************
-gpio_test.cpp
-
-Example code for GPIO access on the pcDuino via C++.
-
-26 Mar 2013 - Mike Hord, SparkFun Electronics
-
-This code is beerware- if you find it useful, please buy me (or, for that
-matter, any other SparkFun employee you met) a pint next time you meet us at
-the local.
-
-***************************************************************************/
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,16 +5,20 @@ the local.
 
 #include "gpio.h"
 
+// These are the paths and filenames of the files for GPIO access.
+#define GPIO_MODE_PATH ""
+#define GPIO_PIN_PATH "/sys/devices/virtual/misc/gpio/pin/gpio"
+
 gpio::gpio(int pinID, int initMode)
 {
-  char path[256]; // nice, long buffer to hold the path name for pin access
+  char path[41];
 
 	memset(path,0,sizeof(path));
-	sprintf(path, "%s%s%d", GPIO_MODE_PATH, GPIO_FILENAME, pinID);
+	sprintf(path, "/sys/devices/virtual/misc/gpio/mode/gpio%d", pinID);
 	_modeFileID = open(path, O_RDWR);
   writeFile(_modeFileID, initMode);
 
-	sprintf(path, "%s%s%d", GPIO_PIN_PATH, GPIO_FILENAME, pinID);
+	sprintf(path, "/sys/devices/virtual/misc/gpio/pin/gpio%d", pinID);
   _pinFileID = open(path, O_RDWR);
 }
 

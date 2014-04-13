@@ -14,10 +14,6 @@ the local.
 #ifndef __gpio_test_h__
 #define __gpio_test_h__
 
-// These are the paths and filenames of the files for GPIO access.
-#define GPIO_MODE_PATH "/sys/devices/virtual/misc/gpio/mode/"
-#define GPIO_PIN_PATH "/sys/devices/virtual/misc/gpio/pin/"
-#define GPIO_FILENAME "gpio"
 
 // Make some aliases to make the code more readable.
 #define HIGH '1'
