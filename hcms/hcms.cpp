@@ -78,3 +78,12 @@ void hcms::clearDisplay()
 	_blankPin->pinWrite(LOW);
 }
 
+void blank()
+{
+	_blankPin->pinWrite(HIGH);
+}
+
+void unblank();
+{
+	_blankPin->pinWrite(LOW);
+}
