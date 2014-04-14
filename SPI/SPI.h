@@ -1,10 +1,9 @@
 #ifndef spi_h 
 #define spi_h
 
-#define pinModeSPI 2 
-#define GPIO_MODE_PATH "/sys/devices/virtual/misc/gpio/mode/"
-#define GPIO_FILENAME  "gpio"
-
+#include "../gpio/gpio.h"
+#include <linux/spi/spidev.h>
+#define SPIPIN '2'
 class SPI
 {
 	public:
@@ -24,9 +23,10 @@ class SPI
 		gpio *_csPin;  // Pointer to a pin object, if the user wants a non-standard
 		               //  chip select for this device.
 		struct spi_ioc_transfer _xfer;
-		unsigned long _mode;
+		unsigned char _mode;
 		unsigned char _bits;
 		unsigned long _speed;
+		static SPI *_activeDevice;
 };
 
 #endif

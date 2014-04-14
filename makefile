@@ -11,7 +11,7 @@ LDFLAGS=
 
 SOURCES = \
 main.cpp \
-SFE_SPI/SFE_SPI.cpp \
+SPI/SPI.cpp \
 gpio/gpio.cpp \
 hcms/hcms.cpp
 

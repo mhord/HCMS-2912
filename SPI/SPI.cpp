@@ -10,6 +10,8 @@
 
 static const char *spi_name = "/dev/spidev0.0";
 
+SPI *_activeDevice=NULL;
+
 SPI::~SPI()
 {
 	close(_spiDev);
@@ -42,6 +44,19 @@ SPI::SPI(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
 
 void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
 {
+	// First things first: let's make sure our pins are all in SPI mode.
+	gpio SPI_MOSI(11, SPIPIN);
+	gpio SPI_MISO(12, SPIPIN);
+	gpio SPI_CLK(13, SPIPIN);
+	if (csPin != 0)
+	{
+		_csPin = csPin;
+	}
+	else
+	{
+		gpio SPI_CS(10, SPIPIN);
+	}
+	
   // As usual, we begin the relationship by establishing a file object which
   //   points to the SPI device. _spiDev is a private class member type int
 	//   used just for this purpose.
@@ -50,14 +65,6 @@ void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
 	// It's extremely important that _mode start at 0, as we'll assemble it by
 	//  OR-ing constants.
 	_mode = 0;
-
-	// The first thing to do is check for an alternate chip select pin GPIO
-	//  object. If that pointer is null, we need to set a bit in the MODE value.
-	if (csPin != 0)
-	{
-		_mode |= SPI_NO_CS;
-		_csPin = csPin;
-	}
 
 	// spiMode should be 0, 1, 2, or 3, defined by the SPI_MODE_x constants
 	//  defined in the spidev.h file. 
@@ -71,6 +78,14 @@ void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
 		_mode |= SPI_LSB_FIRST;
 	}
 
+	// The last element of _mode that we worry about is whether we should set
+	//  the SPI_NO_CS flag. If we're using an alternate CS pin, we don't want
+	//  to accidentally trigger the native CS pin when we transmit.
+	if (_csPin != 0)
+	{
+		_mode |= SPI_NO_CS;
+	}
+
 	// We've assembled the important bits of the 32-bit mode word. Let's push
 	//  it to the device driver.
 	ioctl(_spiDev, SPI_IOC_WR_MODE, &_mode);
@@ -80,6 +95,10 @@ void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
   int bits_per_word = 8;
   ioctl(_spiDev, SPI_IOC_WR_BITS_PER_WORD, &bits_per_word);
   
+	// We want to cache the speed value for later, in case we need to restore
+	//  the settings if they get changed by some other object
+	_speed = speed;
+
 	// The _xfer struct will be used for each transfer; we'll set some defaults
 	//  here as well.
   //    * tx_buf - a pointer to the data to be transferred
@@ -95,12 +114,36 @@ void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
   _xfer.speed_hz = speed;
   _xfer.cs_change = 1;
   _xfer.bits_per_word = 8;
+
+	_activeDevice = this;
 }
 
 void SPI::writeBytes(char *buffer, int txLen)
 {
+	if (_activeDevice != this)
+	{
+		_activeDevice = this;
+
+		memset(&_xfer, 0, sizeof(_xfer));
+		_xfer.speed_hz = _speed;
+		_xfer.cs_change = 1;
+		_xfer.bits_per_word = 8;
+		
+		int bits_per_word = 8;
+		ioctl(_spiDev, SPI_IOC_WR_BITS_PER_WORD, &bits_per_word);
+
+		ioctl(_spiDev, SPI_IOC_WR_MODE, &_mode);
+	}
 	_xfer.tx_buf = (unsigned long)buffer;
 	_xfer.len = txLen;
+	if (_csPin != 0)
+	{
+		_csPin->pinWrite(LOW);
+	}
 	ioctl(_spiDev, SPI_IOC_MESSAGE(1), &_xfer);
+	if (_csPin != 0)
+	{
+		_csPin->pinWrite(HIGH);
+	}
 }
 

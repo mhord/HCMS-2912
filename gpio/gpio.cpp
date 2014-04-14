@@ -5,10 +5,6 @@
 
 #include "gpio.h"
 
-// These are the paths and filenames of the files for GPIO access.
-#define GPIO_MODE_PATH ""
-#define GPIO_PIN_PATH "/sys/devices/virtual/misc/gpio/pin/gpio"
-
 gpio::gpio(int pinID, int initMode)
 {
   char path[41];
