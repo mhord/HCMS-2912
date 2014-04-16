@@ -15,6 +15,8 @@ class hcms : public SPI
 		void initDisplay();
 		void clearDisplay();
 		void printChar(char printee);
+		void blank();
+		void unblank();
 	private:
 		int _numChars;
 		gpio *_resetPin;

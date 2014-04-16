@@ -19,40 +19,43 @@ SPI::~SPI()
 
 SPI::SPI()
 {
-	init(SPI_MODE_0, 0, 1000000, false); 
+	init(SPI_MODE_0, 1000000, false, NULL); 
 }
 
 SPI::SPI(unsigned char spiMode)
 {
-	init(spiMode, 0, 1000000, false); 
+	init(spiMode, 1000000, false, NULL); 
 }
 
-SPI::SPI(unsigned char spiMode, gpio *csPin)
+SPI::SPI(unsigned char spiMode, long speed)
 {
-	init(spiMode, csPin, 1000000, false); 
+	init(spiMode, speed, false, NULL); 
 }
 
-SPI::SPI(unsigned char spiMode, gpio *csPin, long speed)
+SPI::SPI(unsigned char spiMode, long speed, bool lsbFirst )
 {
-	init(spiMode, csPin, speed, false); 
+	init(spiMode, speed, false, NULL); 
 }
 
-SPI::SPI(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
+SPI::SPI(unsigned char spiMode, long speed, bool lsbFirst, gpio *csPin)
 {
-	init(spiMode, csPin, speed, lsbFirst); 
+	init(spiMode, speed, lsbFirst, csPin); 
 }
 
-void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
+void SPI::init(unsigned char spiMode, long speed, bool lsbFirst, gpio *csPin)
 {
+	// Grab the input parameters and stuff them in the local variables.
+	_speed = speed;
+	_csPin = csPin;
+	_lsbFirst = lsbFirst;
+	_mode = spiMode;
+
 	// First things first: let's make sure our pins are all in SPI mode.
 	gpio SPI_MOSI(11, SPIPIN);
 	gpio SPI_MISO(12, SPIPIN);
 	gpio SPI_CLK(13, SPIPIN);
-	if (csPin != 0)
-	{
-		_csPin = csPin;
-	}
-	else
+
+	if (_csPin == NULL)
 	{
 		gpio SPI_CS(10, SPIPIN);
 	}
@@ -62,37 +65,44 @@ void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
 	//   used just for this purpose.
   _spiDev = open(spi_name, O_RDWR);
 
-	// It's extremely important that _mode start at 0, as we'll assemble it by
-	//  OR-ing constants.
-	_mode = 0;
+	// We'll make a little temp variable to transmit these various things to the
+	//  SPI driver.
+	int temp = 0;
 
-	// spiMode should be 0, 1, 2, or 3, defined by the SPI_MODE_x constants
-	//  defined in the spidev.h file. 
-  _mode |= spiMode;
-  
 	// The boolean lsbfirst is a rare case where the bit order should be 
 	//  reversed during transmission; it corresponds to the SPI_LSB_FIRST
 	//  constant in the spidev.h file.
- 	if (lsbFirst) 
+ 	if (_lsbFirst) 
 	{
-		_mode |= SPI_LSB_FIRST;
+		temp = SPI_LSB_FIRST;
+		ioctl(_spiDev, SPI_IOC_WR_LSB_FIRST, &temp);
+	}
+	else
+	{
+		ioctl(_spiDev, SPI_IOC_WR_LSB_FIRST, &temp);
 	}
 
+	// spiMode should be 0, 1, 2, or 3, defined by the SPI_MODE_x constants
+	//  defined in the spidev.h file. 
+  _mode = spiMode;  // Store setting permanently.
+	temp = _mode;     // Store in temp for immediate use.
+  
 	// The last element of _mode that we worry about is whether we should set
 	//  the SPI_NO_CS flag. If we're using an alternate CS pin, we don't want
 	//  to accidentally trigger the native CS pin when we transmit.
 	if (_csPin != 0)
 	{
-		_mode |= SPI_NO_CS;
+		temp |= SPI_NO_CS;
 	}
-
-	// We've assembled the important bits of the 32-bit mode word. Let's push
-	//  it to the device driver.
-	ioctl(_spiDev, SPI_IOC_WR_MODE, &_mode);
+	
+	// We've assembled the stuff that needs to be sent to the "mode" setting;
+	//  send it along.
+	ioctl(_spiDev, SPI_IOC_WR_MODE, &temp);
 
   // Some devices may require more than 8 bits of data per transfer word. The
-  //   SPI_IOC_WR_BITS_PER_WORD command allows you to change this.
-  int bits_per_word = 8;
+  //   SPI_IOC_WR_BITS_PER_WORD command allows you to change this. Oddly, this
+	//   seems to be '0' for the default 8-bit setting.
+  int bits_per_word = 0;
   ioctl(_spiDev, SPI_IOC_WR_BITS_PER_WORD, &bits_per_word);
   
 	// We want to cache the speed value for later, in case we need to restore
@@ -111,16 +121,17 @@ void SPI::init(unsigned char spiMode, gpio *csPin, long speed, bool lsbFirst)
   //    * pad - ??? leave it alone.
   
   memset(&_xfer, 0, sizeof(_xfer));
-  _xfer.speed_hz = speed;
+  _xfer.speed_hz = _speed;
   _xfer.cs_change = 1;
   _xfer.bits_per_word = 8;
+	_xfer.pad = 0;
 
-	_activeDevice = this;
+//	_activeDevice = this;
 }
 
 void SPI::writeBytes(char *buffer, int txLen)
 {
-	if (_activeDevice != this)
+/*	if (_activeDevice != this)
 	{
 		_activeDevice = this;
 
@@ -133,17 +144,17 @@ void SPI::writeBytes(char *buffer, int txLen)
 		ioctl(_spiDev, SPI_IOC_WR_BITS_PER_WORD, &bits_per_word);
 
 		ioctl(_spiDev, SPI_IOC_WR_MODE, &_mode);
-	}
+	}*/
 	_xfer.tx_buf = (unsigned long)buffer;
 	_xfer.len = txLen;
 	if (_csPin != 0)
 	{
-		_csPin->pinWrite(LOW);
+		(_csPin->pinWrite(LOW));
 	}
 	ioctl(_spiDev, SPI_IOC_MESSAGE(1), &_xfer);
 	if (_csPin != 0)
 	{
-		_csPin->pinWrite(HIGH);
+		(_csPin->pinWrite(HIGH));
 	}
 }
 
