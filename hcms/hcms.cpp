@@ -5,26 +5,22 @@
 #include <linux/spi/spidev.h>
 
 #include "../gpio/gpio.h"
-#include "../SPI/SPI.h"
+#include "../spi/spi_device.h"
 #include "characters.h"
 #include "hcms.h"
 
-SPI *SPI::_activeDevice;
 
 hcms::~hcms()
 {
-	close(_spiDev);
 }
 
-hcms::hcms(int numChars, gpio *resetPin,\
+hcms::hcms(spi_device spiObj, int numChars, gpio *resetPin,\
 		       gpio *rsPin, gpio *blankPin)
 {
-	_spiDev = open("/dev/spidev0.0", O_RDWR);
 	_numChars = numChars;
 	_resetPin = resetPin;
 	_rsPin = rsPin;
 	_blankPin = blankPin;
-	_activeDevice = this;
 	_mode = SPI_MODE_0;
 	_speed = 3000000;
 	init(_mode, 0, _speed, false);

@@ -8,9 +8,7 @@ class hcms : public SPI
 {
 	public:
 		hcms(int numChars, gpio *resetPin,\
-		           gpio *rsPin, gpio *blankPin);
-		hcms(int numChars, gpio *resetPin,\
-		           gpio *rsPin, gpio *blankPin, gpio *chipSelect);
+		           gpio *rsPin, gpio *blankPin, gpio *chipSelect=NULL);
 		~hcms();
 		void initDisplay();
 		void clearDisplay();
@@ -22,6 +20,7 @@ class hcms : public SPI
 		gpio *_resetPin;
 		gpio *_blankPin;
 		gpio *_rsPin;
+		spi_device *_myDevice;
 };
 
 #endif
